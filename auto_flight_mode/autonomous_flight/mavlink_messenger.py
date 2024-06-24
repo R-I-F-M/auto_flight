@@ -31,3 +31,31 @@ class MavLinkMessenger:
         )
 
         self.master.mav.senf(command_long_msg)
+    
+    def set_home_location(self):
+        self.master.mav.command_long_send()(
+            self.master.target_system,
+            self.master.target_component,
+            mavutil.mavlink.MAV_CMD_SET_HOME,
+            1,  #set current location
+            0,0,0,0,  #Unused Parameters
+            0,0,0  # Latitude ,Longitude,Altitude
+        )
+        print("Home Location Set")
+    
+    def get_home_location(self):
+        self.master.mav.command_long_send()(
+            self.master.target_system,
+            self.master.target_component,
+            mavutil.mavlink.MAV_CMD_GET_HOME_POSITION,
+            0,0,0,0,0,0,0,0
+        )
+        msg = self.master.recv_match(type='HOME_POSITION',blocking=True,timeout=10)
+        if msg is not None:
+            print(f"Home position: Latitude={msg.latitude}, Longitude={msg.longitude}, Altitude={msg.altitude}")
+            return (msg.latitude, msg.longitude, msg.altitude)
+        else:
+            print("Failed to get home position.")
+            return None
+    
+    def 
