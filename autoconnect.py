@@ -13,7 +13,7 @@ class DroneAutoConnect:
         self.drones = []
 
     def find_serial_ports(self):
-        """
+        """ 
         Find all available serial ports on the system.
         """
         ports = serial.tools.list_ports.comports()
@@ -29,19 +29,20 @@ class DroneAutoConnect:
             print(f"Trying to connect to port: {port}")
             try:
                 # Attempt to connect to Pixhawk on the given port
-                master = mavutil.mavlink_connection(port, baud=baudrate)
+                self.master = mavutil.mavlink_connection(port, baud=baudrate)
                 # Wait for the heartbeat message to confirm connection
-                master.wait_heartbeat(timeout=10)
+                heartbeat = self.master.wait_heartbeat(timeout=10)
+                print(f"Pixhawk Heartbeat {heartbeat}")
                 print(f"Connected to Pixhawk on {port}")
 
                 # Retrieve system and component IDs
-                system_id = master.target_system
-                component_id = master.target_component
+                system_id = self.master.target_system
+                component_id = self.master.target_component
                 print(f"System ID: {system_id}, Component ID: {component_id}")
 
                 # Store this drone's connection and system details in the list
                 self.drones.append({
-                    'master': master,
+                    'master': self.master,
                     'system_id': system_id,
                     'component_id': component_id,
                     'port': port
@@ -96,6 +97,31 @@ class DroneAutoConnect:
             # Example: Sending a command to all drones to request capabilities
             self.request_autopilot_capabilities(system_id)
 
+    def BatteryStatus(self):
+            if self.master.heartbeat()
+            message = self.master.mav.command_long_encode(
+                self.master.target_system,  # Target system ID
+                self.master.target_component,  # Target component ID
+                mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  # ID of command to send
+                0,  # Confirmation
+                mavutil.mavlink.MAVLINK_MSG_ID_BATTERY_STATUS,  # param1: Message ID to be streamed
+                1000000, # param2: Interval in microseconds (1 second here)
+                0,       # param3 (unused)
+                0,       # param4 (unused)
+                0,       # param5 (unused)
+                0,       # param6 (unused)
+                0        # param7 (unused)
+                )
+
+            self.master.mav.send(message)
+
+            while True:
+                 msg = self.master.recv_match(type="BATTERY_STATUS",blocking=True)
+                 if msg:
+                      battery_remaining = msg.battery_remaining # Battery Percentage remaining
+                    #   print(f"Battery Remaining : {battery_remaining}%")
+
+            return battery_remaining + "%"
 
 # Example usage
 if __name__ == "__main__":
@@ -103,6 +129,8 @@ if __name__ == "__main__":
 
     # Automatically connect to all drones on available ports
     drone_connect.auto_connect()
-
     # Send command to request capabilities for all drones
     drone_connect.send_command_to_all_drones()
+
+
+
